@@ -25,7 +25,7 @@ export default function Header() {
             Find a Spot
           </Link>
           <Link
-            href="/business/1"
+            href="/business"
             className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600"
           >
             For Businesses
