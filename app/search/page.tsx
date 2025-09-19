@@ -3,9 +3,18 @@
 import BusinessCard from "../../components/BusinessCard";
 import { useState, useMemo, useEffect } from "react";
 
+interface Business {
+  id: number;
+  name: string;
+  description: string;
+  hasPower: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [businesses, setBusinesses] = useState([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch businesses from API on component mount
@@ -13,6 +22,9 @@ export default function SearchPage() {
     async function fetchBusinesses() {
       try {
         const response = await fetch("/api/businesses");
+        if (!response.ok) {
+          throw new Error("Failed to fetch businesses");
+        }
         const data = await response.json();
         setBusinesses(data);
       } catch (error) {

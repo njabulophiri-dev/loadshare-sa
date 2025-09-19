@@ -1,32 +1,100 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-// This will later come from your database and authentication
-const mockBusiness = {
-  id: 1,
-  name: "Cafe Java",
-  description:
-    "The best coffee in town, now with a generator to keep you caffeinated through load shedding.",
-  hasPower: true, // This is the value we want to update
-};
+interface Business {
+  id: number;
+  name: string;
+  description: string;
+  hasPower: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function DashboardPage() {
-  // State to manage the power status
-  const [hasPower, setHasPower] = useState(mockBusiness.hasPower);
-  // State to show a confirmation message
+  const [business, setBusiness] = useState<Business | null>(null);
+  const [hasPower, setHasPower] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  // Function to handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault(); // Prevent the browser from refreshing
-    console.log("Would save this status to the database:", hasPower);
+  // Fetch business data on component mount
+  useEffect(() => {
+    async function fetchBusiness() {
+      try {
+        // Using business ID 1 (Cafe Java from seed data)
+        const response = await fetch("/api/businesses/1");
+        if (!response.ok) {
+          throw new Error(`Failed to fetch business data: ${response.status}`);
+        }
+        const data = await response.json();
+        setBusiness(data);
+        setHasPower(data.hasPower);
+      } catch (error) {
+        console.error("Failed to fetch business:", error);
+        alert("Failed to load business data. Check console for details.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchBusiness();
+  }, []);
 
-    // Simulate saving to a database
-    setIsSaved(true);
-    // Hide the success message after 2 seconds
-    setTimeout(() => setIsSaved(false), 2000);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdating(true);
+
+    try {
+      const response = await fetch("/api/businesses/1", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ hasPower }),
+      });
+
+      // Check if response is OK before trying to parse JSON
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Server responded with ${response.status}: ${errorText}`
+        );
+      }
+
+      const updatedBusiness = await response.json();
+      console.log("Status updated successfully:", updatedBusiness);
+
+      // Update local state with the new data
+      setBusiness(updatedBusiness);
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+    } catch (error) {
+      console.error("Error updating status:", error);
+      alert(
+        `Failed to update status: ${error.message}. Check console for details.`
+      );
+    } finally {
+      setIsUpdating(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen p-8 max-w-2xl mx-auto">
+        <div className="text-center">Loading business data...</div>
+      </main>
+    );
+  }
+
+  if (!business) {
+    return (
+      <main className="min-h-screen p-8 max-w-2xl mx-auto">
+        <div className="text-center text-red-600">
+          Business not found or failed to load
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen p-8 max-w-2xl mx-auto">
@@ -38,21 +106,18 @@ export default function DashboardPage() {
       </p>
 
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">{mockBusiness.name}</h2>
-        <p className="text-gray-600 mb-6">{mockBusiness.description}</p>
+        <h2 className="text-xl font-semibold mb-4">{business.name}</h2>
+        <p className="text-gray-600 mb-6">{business.description}</p>
 
         <form onSubmit={handleSubmit}>
           {/* Power Status Toggle */}
           <div className="mb-6">
-            <label
-              htmlFor="power-status"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Current Power Status
             </label>
             <div className="flex items-center">
               <button
-                type="button" // This is a button, not a form submitter
+                type="button"
                 className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                   hasPower ? "bg-green-500" : "bg-gray-400"
                 }`}
@@ -77,15 +142,16 @@ export default function DashboardPage() {
           {/* Save Button */}
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            disabled={isUpdating}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-3 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed transition-colors"
           >
-            Update Status
+            {isUpdating ? "Updating..." : "Update Status"}
           </button>
 
           {/* Success Message */}
           {isSaved && (
             <div className="mt-4 p-3 bg-green-100 text-green-700 rounded-md text-center">
-              Status updated successfully!
+              ✅ Status updated successfully!
             </div>
           )}
         </form>
