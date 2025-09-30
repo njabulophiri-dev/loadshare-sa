@@ -67,11 +67,12 @@ async function main() {
         name: "Cafe Java",
         type: "coffee",
         address: "123 Sandton Drive, Sandton",
-        area: "Sandton, Johannesburg",
-        description: "Premium coffee shop with full generator backup. Perfect for remote work during load shedding.",
+        areaId: "eskde-4-sandton-sandton",
+        areaName: "Sandton, Johannesburg",
+        description:
+          "Premium coffee shop with full generator backup. Perfect for remote work during load shedding.",
         hasPower: true,
         powerType: "generator",
-        capacity: "Medium",
         ownerId: businessOwner.id,
         verified: true,
         active: true,
@@ -80,11 +81,12 @@ async function main() {
         name: "The Office Hub",
         type: "coworking",
         address: "45 Rivonia Road, Sandton",
-        area: "Sandton, Johannesburg", 
-        description: "Modern co-working space with UPS backup and high-speed fiber. Meeting rooms available.",
+        areaId: "eskde-4-sandton-sandton",
+        areaName: "Sandton, Johannesburg",
+        description:
+          "Modern co-working space with UPS backup and high-speed fiber. Meeting rooms available.",
         hasPower: true,
         powerType: "ups",
-        capacity: "Large",
         ownerId: businessOwner2.id,
         verified: true,
         active: true,
@@ -93,11 +95,12 @@ async function main() {
         name: "Gino's Pizzeria",
         type: "restaurant",
         address: "78 Main Street, Pretoria",
-        area: "Pretoria Central",
-        description: "Authentic Italian pizza restaurant. Currently no backup power during load shedding.",
+        areaId: "eskde-10-pretoriacentral",
+        areaName: "Pretoria Central",
+        description:
+          "Authentic Italian pizza restaurant. Currently no backup power during load shedding.",
         hasPower: false,
         powerType: "none",
-        capacity: "Small",
         ownerId: businessOwner3.id,
         verified: true,
         active: true,
@@ -106,11 +109,12 @@ async function main() {
         name: "FitLife Gym",
         type: "gym",
         address: "22 Oak Avenue, Randburg",
-        area: "Randburg, Johannesburg",
-        description: "Full-service gym with solar backup. Stay fit even during power outages.",
+        areaId: "eskde-4-sandton-sandton",
+        areaName: "Randburg, Johannesburg",
+        description:
+          "Full-service gym with solar backup. Stay fit even during power outages.",
         hasPower: true,
         powerType: "solar",
-        capacity: "Large",
         ownerId: businessOwner.id,
         verified: false, // Not verified yet
         active: true,
@@ -120,17 +124,29 @@ async function main() {
 
   console.log("✅ Seed data created successfully!");
   console.log("📊 Created Users:");
-  console.log(`   - ${businessOwner.name} (${businessOwner.email}) - ${businessOwner.role}`);
-  console.log(`   - ${businessOwner2.name} (${businessOwner2.email}) - ${businessOwner2.role}`);
-  console.log(`   - ${businessOwner3.name} (${businessOwner3.email}) - ${businessOwner3.role}`);
-  console.log(`   - ${regularUser.name} (${regularUser.email}) - ${regularUser.role}`);
-  
+  console.log(
+    `   - ${businessOwner.name} (${businessOwner.email}) - ${businessOwner.role}`
+  );
+  console.log(
+    `   - ${businessOwner2.name} (${businessOwner2.email}) - ${businessOwner2.role}`
+  );
+  console.log(
+    `   - ${businessOwner3.name} (${businessOwner3.email}) - ${businessOwner3.role}`
+  );
+  console.log(
+    `   - ${regularUser.name} (${regularUser.email}) - ${regularUser.role}`
+  );
+
   console.log("📊 Created Businesses:");
   const businesses = await prisma.business.findMany({
-    include: { owner: true }
+    include: { owner: true },
   });
-  businesses.forEach(business => {
-    console.log(`   - ${business.name} (${business.type}) - ${business.hasPower ? '⚡ Has Power' : '🚫 No Power'} - Verified: ${business.verified} - Owner: ${business.owner.name}`);
+  businesses.forEach((business) => {
+    console.log(
+      `   - ${business.name} (${business.type}) - ${
+        business.hasPower ? "⚡ Has Power" : "🚫 No Power"
+      } - Verified: ${business.verified} - Owner: ${business.owner.name}`
+    );
   });
 }
 

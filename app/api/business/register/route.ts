@@ -1,61 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
 
-const prisma = new PrismaClient();
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    // Verify authentication
     const session = await getServerSession(authOptions);
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, description } = await request.json();
+    const { name, type, address, areaId, areaName, hasPower, powerType } =
+      await req.json();
 
-    // Validate input
-    if (!name || !description) {
+    if (!name || !type || !address || !areaId) {
       return NextResponse.json(
-        { error: "Business name and description are required" },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Check if user already has a business
-    const existingBusiness = await prisma.business.findFirst({
-      where: { ownerId: session.user.id },
-    });
-
-    if (existingBusiness) {
-      return NextResponse.json(
-        { error: "You already have a registered business" },
-        { status: 400 }
-      );
-    }
-
-    // Create the business
     const business = await prisma.business.create({
       data: {
         name,
-        description,
+        type,
+        address,
+        areaId,
+        areaName: areaName || null,
+        hasPower: hasPower ?? false,
+        powerType: powerType || null,
+        verified: false,
+        active: true,
         ownerId: session.user.id,
       },
     });
 
-    // Update user role to BUSINESS_OWNER
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: { role: "BUSINESS_OWNER" },
-    });
-
-    return NextResponse.json({ business }, { status: 201 });
-  } catch (error) {
-    console.error("Business registration error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ business });
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

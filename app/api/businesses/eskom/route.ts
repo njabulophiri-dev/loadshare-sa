@@ -1,24 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import fetch from "node-fetch";
 
-export async function GET(req: Request) {
+export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     const areaId = searchParams.get("areaId");
     if (!areaId)
       return NextResponse.json({ businesses: [], eskomStatus: null });
 
     // Fetch Eskom status
     const eskomRes = await fetch(
-      `https://developer.sepush.co.za/business/areas/${areaId}/status`,
+      `https://developer.sepush.co.za/business/2.0/area?id=${areaId}`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.ESKOM_SEPUSH_API_KEY}`,
+          Token: process.env.ESKOM_SEPUSH_API_KEY || "",
         },
       }
     );
-    const eskomData = await eskomRes.json();
+
+    let eskomData = null;
+    if (eskomRes.ok) {
+      eskomData = await eskomRes.json();
+    }
 
     // Fetch businesses in this area
     const businesses = await prisma.business.findMany({
@@ -30,13 +33,13 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       eskomStatus: {
-        area: eskomData.name,
-        status: eskomData.stage || "Unknown",
-        lastUpdated: eskomData.updatedAt || new Date().toISOString(),
+        area: eskomData?.area?.name || "Unknown Area",
+        status: eskomData?.events?.[0]?.stage || "Unknown",
+        lastUpdated: eskomData?.area?.updated || new Date().toISOString(),
       },
       businesses,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Eskom + business search error:", error);
     return NextResponse.json(
       { businesses: [], eskomStatus: null },

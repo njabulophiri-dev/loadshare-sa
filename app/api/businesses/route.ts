@@ -1,68 +1,79 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
 
-export async function GET(request: Request) {
+interface BusinessWhereClause {
+  active: boolean;
+  verified: boolean;
+  AND?: Array<{
+    OR?: Array<{
+      areaId?: { contains: string; mode: "insensitive" };
+      areaName?: { contains: string; mode: "insensitive" };
+    }>;
+    name?: { contains: string; mode: "insensitive" };
+  }>;
+  type?: { contains: string; mode: "insensitive" };
+}
+
+export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const area = searchParams.get("area");
-    const type = searchParams.get("type");
-    const hasPower = searchParams.get("hasPower");
-    const owner = searchParams.get("owner");
+    const { searchParams } = new URL(req.url);
 
-    // If owner=true, return user's businesses (including unverified)
-    if (owner === "true") {
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.id) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+    const areaQuery = searchParams.get("area") || undefined;
+    const type = searchParams.get("type") || undefined;
+    const search = searchParams.get("search") || undefined; // business name search
 
-      const userBusinesses = await prisma.business.findMany({
-        where: {
-          ownerId: session.user.id,
-          active: true,
-        },
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          address: true,
-          area: true,
-          hasPower: true,
-          powerType: true,
-          capacity: true,
-          description: true,
-          verified: true,
-          active: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+    // Pagination
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
+    const skip = (page - 1) * limit;
 
-      return NextResponse.json({ businesses: userBusinesses });
-    }
+    // Sorting
+    const sortBy = searchParams.get("sortBy") || "createdAt";
+    const sortOrder = (searchParams.get("sortOrder") || "desc") as
+      | "asc"
+      | "desc";
 
-    // Build where clause for public business search
-    const where: any = {
+    const where: BusinessWhereClause = {
       active: true,
-      verified: true, // Only show verified businesses to public
+      verified: true,
     };
 
-    if (area) {
-      // Case-insensitive search that works with SQLite now
-      where.area = { contains: area.toLowerCase() };
+    // Smart area search: split into tokens
+    if (areaQuery) {
+      const areaTokens = areaQuery
+        .split(/[^a-zA-Z0-9]+/)
+        .filter(Boolean)
+        .map((token) => token.toLowerCase());
+
+      where.AND = areaTokens.map((token: string) => ({
+        OR: [
+          { areaId: { contains: token, mode: "insensitive" } },
+          { areaName: { contains: token, mode: "insensitive" } },
+        ],
+      }));
     }
 
-    if (type && type !== "") {
-      where.type = type;
+    // Type filter
+    if (type) {
+      where.type = { contains: type, mode: "insensitive" };
     }
 
-    if (hasPower === "true") {
-      where.hasPower = true;
+    // Tokenized business name search
+    if (search) {
+      const nameTokens = search
+        .split(/[^a-zA-Z0-9]+/)
+        .filter(Boolean)
+        .map((token) => token.toLowerCase());
+
+      // Match any token in business name
+      where.AND = where.AND || [];
+
+      // Create name conditions with proper typing
+      const nameConditions = nameTokens.map((token) => ({
+        name: { contains: token, mode: "insensitive" as const },
+      }));
+
+      where.AND.push(...nameConditions);
     }
 
     const businesses = await prisma.business.findMany({
@@ -72,11 +83,10 @@ export async function GET(request: Request) {
         name: true,
         type: true,
         address: true,
-        area: true,
+        areaId: true,
+        areaName: true,
         hasPower: true,
         powerType: true,
-        capacity: true,
-        description: true,
         verified: true,
         createdAt: true,
         updatedAt: true,
@@ -87,15 +97,26 @@ export async function GET(request: Request) {
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 50, // Limit results
+      orderBy: { [sortBy]: sortOrder },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({ businesses });
-  } catch (error) {
+    const total = await prisma.business.count({ where });
+
+    return NextResponse.json({
+      businesses,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error: unknown) {
     console.error("Business search error:", error);
-    return NextResponse.json({ businesses: [] }, { status: 500 });
+    const errorMessage =
+      error instanceof Error ? error.message : "Something went wrong";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

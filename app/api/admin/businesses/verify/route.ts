@@ -1,48 +1,40 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session.user.isAdmin) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const unverifiedBusinesses = await prisma.business.findMany({
-      where: { verified: false, active: true },
-      include: { owner: { select: { name: true, email: true } } },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return NextResponse.json({ businesses: unverifiedBusinesses });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
-  }
+interface VerificationRequest {
+  businessId: string;
+  verified: boolean;
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session.user.isAdmin) {
+
+    if (!session?.user?.id || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { businessId, action } = await request.json();
-    if (!businessId || !["approve", "reject"].includes(action)) {
-      return NextResponse.json({ error: "Invalid data" }, { status: 400 });
+    const { businessId, verified } = (await req.json()) as VerificationRequest;
+
+    if (!businessId || typeof verified !== "boolean") {
+      return NextResponse.json(
+        { error: "Missing or invalid parameters" },
+        { status: 400 }
+      );
     }
 
-    const updated = await prisma.business.update({
+    const business = await prisma.business.update({
       where: { id: businessId },
-      data: { verified: action === "approve", active: action === "approve" },
+      data: { verified },
     });
 
-    return NextResponse.json({ business: updated });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json({ business });
+  } catch (error: unknown) {
+    console.error("Business verify error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

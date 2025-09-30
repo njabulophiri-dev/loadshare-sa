@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useSession, signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface LoadSheddingStatus {
   area: string;
@@ -35,54 +35,56 @@ interface Business {
 }
 
 export default function Dashboard() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
-  const [loadShedding, setLoadShedding] = useState<LoadSheddingStatus | null>(null);
+  const [loadShedding, setLoadShedding] = useState<LoadSheddingStatus | null>(
+    null
+  );
   const [userBusinesses, setUserBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [businessLoading, setBusinessLoading] = useState(false);
   const [showRegistration, setShowRegistration] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    type: '',
-    address: '',
-    area: '',
-    powerType: '',
-    capacity: 'Medium',
-    description: ''
+    name: "",
+    type: "",
+    address: "",
+    area: "",
+    powerType: "",
+    capacity: "Medium",
+    description: "",
   });
   const [registerLoading, setRegisterLoading] = useState(false);
 
   useEffect(() => {
-    if (status === 'loading') return;
+    if (session === undefined) return; // Still loading
     if (!session) {
-      router.push('/auth/signin');
+      router.push("/auth/signin");
       return;
     }
-    
+
     // Load load shedding data
-    fetch('/api/eskom/status?areaId=eskde-4-sandton-sandton')
-      .then(res => res.json())
-      .then(data => {
+    fetch("/api/eskom/status?areaId=eskde-4-sandton-sandton")
+      .then((res) => res.json())
+      .then((data) => {
         setLoadShedding(data);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
 
     // Load user's businesses if they're a business owner
-    if (session.user?.role === 'BUSINESS_OWNER') {
+    if (session.user?.role === "BUSINESS_OWNER") {
       loadUserBusinesses();
     }
-  }, [session, status, router]);
+  }, [session, router]);
 
   const loadUserBusinesses = async () => {
     setBusinessLoading(true);
     try {
-      const response = await fetch('/api/businesses?owner=true');
+      const response = await fetch("/api/businesses?owner=true");
       const data = await response.json();
       setUserBusinesses(data.businesses || []);
-    } catch (error) {
-      console.error('Error loading businesses:', error);
+    } catch {
+      console.error("Error loading businesses");
     } finally {
       setBusinessLoading(false);
     }
@@ -92,10 +94,14 @@ export default function Dashboard() {
     setShowRegistration(true);
   };
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleFormChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -104,10 +110,10 @@ export default function Dashboard() {
     setRegisterLoading(true);
 
     try {
-      const response = await fetch('/api/businesses/register', {
-        method: 'POST',
+      const response = await fetch("/api/businesses/register", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
@@ -115,30 +121,32 @@ export default function Dashboard() {
       const result = await response.json();
 
       if (response.ok) {
-        alert('Business registered successfully! It will be visible after verification.');
+        alert(
+          "Business registered successfully! It will be visible after verification."
+        );
         setShowRegistration(false);
         setFormData({
-          name: '',
-          type: '',
-          address: '',
-          area: '',
-          powerType: '',
-          capacity: 'Medium',
-          description: ''
+          name: "",
+          type: "",
+          address: "",
+          area: "",
+          powerType: "",
+          capacity: "Medium",
+          description: "",
         });
         // Refresh the business list
         loadUserBusinesses();
       } else {
-        alert(result.error || 'Failed to register business');
+        alert(result.error || "Failed to register business");
       }
-    } catch (error) {
-      alert('Failed to register business. Please try again.');
+    } catch {
+      console.error("Error fetching businesses");
     } finally {
       setRegisterLoading(false);
     }
   };
 
-  if (status === 'loading') {
+  if (session === undefined) {
     return <div className="p-8">Loading...</div>;
   }
 
@@ -151,49 +159,62 @@ export default function Dashboard() {
       <div className="max-w-6xl mx-auto px-4">
         {/* Welcome Section */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h1 className="text-3xl font-bold mb-2">Welcome back, {session.user?.name}! 👋</h1>
+          <h1 className="text-3xl font-bold mb-2">
+            Welcome back, {session.user?.name}! 👋
+          </h1>
           <p className="text-gray-600">
-            {session.user?.role === 'BUSINESS_OWNER' 
-              ? 'Manage your businesses and view load shedding information' 
-              : 'View load shedding information for your area'
-            }
+            {session.user?.role === "BUSINESS_OWNER"
+              ? "Manage your businesses and view load shedding information"
+              : "View load shedding information for your area"}
           </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Load Shedding Status */}
           <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Current Load Shedding Status</h2>
-            
+            <h2 className="text-xl font-semibold mb-4">
+              Current Load Shedding Status
+            </h2>
+
             {loading ? (
               <div className="text-gray-500">Loading status...</div>
             ) : loadShedding ? (
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span>Current Stage:</span>
-                  <span className={`text-lg font-bold ${
-                    (loadShedding.currentStage || 0) > 0 ? 'text-red-600' : 'text-green-600'
-                  }`}>
-                    {loadShedding.currentStage ? `Stage ${loadShedding.currentStage}` : 'No Load Shedding'}
+                  <span
+                    className={`text-lg font-bold ${
+                      (loadShedding.currentStage || 0) > 0
+                        ? "text-red-600"
+                        : "text-green-600"
+                    }`}
+                  >
+                    {loadShedding.currentStage
+                      ? `Stage ${loadShedding.currentStage}`
+                      : "No Load Shedding"}
                   </span>
                 </div>
-                
+
                 {loadShedding.nextStage && (
                   <div className="flex justify-between">
                     <span>Next Stage:</span>
-                    <span className="font-medium">Stage {loadShedding.nextStage}</span>
+                    <span className="font-medium">
+                      Stage {loadShedding.nextStage}
+                    </span>
                   </div>
                 )}
-                
+
                 <div className="flex justify-between text-sm text-gray-500">
                   <span>Area:</span>
                   <span>{loadShedding.area}</span>
                 </div>
-                
+
                 {loadShedding.updated && (
                   <div className="flex justify-between text-sm text-gray-500">
                     <span>Updated:</span>
-                    <span>{new Date(loadShedding.updated).toLocaleString()}</span>
+                    <span>
+                      {new Date(loadShedding.updated).toLocaleString()}
+                    </span>
                   </div>
                 )}
               </div>
@@ -206,19 +227,19 @@ export default function Dashboard() {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
             <div className="space-y-3">
-              <button 
-                onClick={() => router.push('/search')}
+              <button
+                onClick={() => router.push("/search")}
                 className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors font-medium"
               >
                 🔍 Find Businesses With Power
               </button>
-              <button 
-                onClick={() => router.push('/search')}
+              <button
+                onClick={() => router.push("/search")}
                 className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors font-medium"
               >
                 📊 View Full Schedule
               </button>
-              <button 
+              <button
                 onClick={handleRegisterBusiness}
                 className="w-full bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 transition-colors font-medium"
               >
@@ -229,12 +250,13 @@ export default function Dashboard() {
         </div>
 
         {/* User's Businesses */}
-        {session.user?.role === 'BUSINESS_OWNER' && (
+        {session.user?.role === "BUSINESS_OWNER" && (
           <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Your Businesses</h2>
               <span className="text-sm text-gray-500">
-                {userBusinesses.length} business{userBusinesses.length !== 1 ? 'es' : ''}
+                {userBusinesses.length} business
+                {userBusinesses.length !== 1 ? "es" : ""}
               </span>
             </div>
 
@@ -242,31 +264,44 @@ export default function Dashboard() {
               <div className="text-gray-500">Loading your businesses...</div>
             ) : userBusinesses.length > 0 ? (
               <div className="grid md:grid-cols-2 gap-4">
-                {userBusinesses.map(business => (
+                {userBusinesses.map((business) => (
                   <div key={business.id} className="border rounded-lg p-4">
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-semibold">{business.name}</h3>
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        business.verified 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {business.verified ? 'Verified' : 'Pending Verification'}
+                      <span
+                        className={`px-2 py-1 rounded text-xs ${
+                          business.verified
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {business.verified
+                          ? "Verified"
+                          : "Pending Verification"}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 capitalize mb-1">{business.type}</p>
-                    <p className="text-sm text-gray-500 mb-2">{business.address}</p>
+                    <p className="text-sm text-gray-600 capitalize mb-1">
+                      {business.type}
+                    </p>
+                    <p className="text-sm text-gray-500 mb-2">
+                      {business.address}
+                    </p>
                     <div className="flex justify-between text-xs text-gray-400">
-                      <span>Power: {business.hasPower ? '✅ Available' : '❌ None'}</span>
-                      <span>Updated: {new Date(business.updatedAt).toLocaleDateString()}</span>
+                      <span>
+                        Power: {business.hasPower ? "✅ Available" : "❌ None"}
+                      </span>
+                      <span>
+                        Updated:{" "}
+                        {new Date(business.updatedAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                <p>You haven't registered any businesses yet.</p>
-                <button 
+                <p>You haven&apos;t registered any businesses yet.</p>
+                <button
                   onClick={handleRegisterBusiness}
                   className="mt-2 text-blue-600 hover:text-blue-800"
                 >
@@ -280,14 +315,20 @@ export default function Dashboard() {
         {/* Today's Schedule */}
         {loadShedding && loadShedding.schedule.length > 0 && (
           <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Today's Load Shedding Schedule</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Today&apos;s Load Shedding Schedule
+            </h2>
             <div className="grid md:grid-cols-4 gap-4">
               {loadShedding.schedule[0]?.stages.map((stageInfo) => (
                 <div key={stageInfo.stage} className="border rounded-lg p-4">
-                  <h3 className="font-semibold mb-2 text-center">Stage {stageInfo.stage}</h3>
+                  <h3 className="font-semibold mb-2 text-center">
+                    Stage {stageInfo.stage}
+                  </h3>
                   <div className="space-y-1 text-sm">
                     {stageInfo.times.map((time, index) => (
-                      <div key={index} className="text-gray-600 text-center">{time}</div>
+                      <div key={index} className="text-gray-600 text-center">
+                        {time}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -300,13 +341,17 @@ export default function Dashboard() {
         {showRegistration && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-              <h3 className="text-xl font-semibold mb-4">Register Your Business</h3>
+              <h3 className="text-xl font-semibold mb-4">
+                Register Your Business
+              </h3>
               <form onSubmit={submitBusinessRegistration}>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Business Name *</label>
-                    <input 
-                      type="text" 
+                    <label className="block text-sm font-medium mb-1">
+                      Business Name *
+                    </label>
+                    <input
+                      type="text"
                       name="name"
                       className="w-full p-2 border rounded-lg"
                       placeholder="Enter your business name"
@@ -315,12 +360,14 @@ export default function Dashboard() {
                       required
                     />
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium mb-1">Business Type *</label>
-                    <select 
+                    <label className="block text-sm font-medium mb-1">
+                      Business Type *
+                    </label>
+                    <select
                       name="type"
-                      className="w-full p-2 border rounded-lg" 
+                      className="w-full p-2 border rounded-lg"
                       value={formData.type}
                       onChange={handleFormChange}
                       required
@@ -334,11 +381,13 @@ export default function Dashboard() {
                       <option value="other">Other</option>
                     </select>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium mb-1">Address *</label>
-                    <input 
-                      type="text" 
+                    <label className="block text-sm font-medium mb-1">
+                      Address *
+                    </label>
+                    <input
+                      type="text"
                       name="address"
                       className="w-full p-2 border rounded-lg"
                       placeholder="Full business address"
@@ -347,11 +396,13 @@ export default function Dashboard() {
                       required
                     />
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium mb-1">Area/Suburb *</label>
-                    <input 
-                      type="text" 
+                    <label className="block text-sm font-medium mb-1">
+                      Area/Suburb *
+                    </label>
+                    <input
+                      type="text"
                       name="area"
                       className="w-full p-2 border rounded-lg"
                       placeholder="e.g., Sandton, Pretoria Central"
@@ -360,12 +411,14 @@ export default function Dashboard() {
                       required
                     />
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium mb-1">Backup Power Type</label>
-                    <select 
+                    <label className="block text-sm font-medium mb-1">
+                      Backup Power Type
+                    </label>
+                    <select
                       name="powerType"
-                      className="w-full p-2 border rounded-lg" 
+                      className="w-full p-2 border rounded-lg"
                       value={formData.powerType}
                       onChange={handleFormChange}
                     >
@@ -375,12 +428,14 @@ export default function Dashboard() {
                       <option value="solar">Solar + Battery</option>
                     </select>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium mb-1">Capacity</label>
-                    <select 
+                    <label className="block text-sm font-medium mb-1">
+                      Capacity
+                    </label>
+                    <select
                       name="capacity"
-                      className="w-full p-2 border rounded-lg" 
+                      className="w-full p-2 border rounded-lg"
                       value={formData.capacity}
                       onChange={handleFormChange}
                     >
@@ -389,10 +444,12 @@ export default function Dashboard() {
                       <option value="Large">Large (Entire premises)</option>
                     </select>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium mb-1">Description</label>
-                    <textarea 
+                    <label className="block text-sm font-medium mb-1">
+                      Description
+                    </label>
+                    <textarea
                       name="description"
                       className="w-full p-2 border rounded-lg"
                       placeholder="Describe your business and power setup"
@@ -402,7 +459,7 @@ export default function Dashboard() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="flex space-x-3 mt-6">
                   <button
                     type="button"
@@ -417,7 +474,7 @@ export default function Dashboard() {
                     disabled={registerLoading}
                     className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
-                    {registerLoading ? 'Registering...' : 'Register Business'}
+                    {registerLoading ? "Registering..." : "Register Business"}
                   </button>
                 </div>
               </form>

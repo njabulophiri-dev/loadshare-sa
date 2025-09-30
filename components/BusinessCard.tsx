@@ -11,7 +11,6 @@ export default function BusinessCard({
   name,
   description,
   hasPower,
-  id,
 }: BusinessCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
@@ -39,8 +38,6 @@ export default function BusinessCard({
         >
           View Details →
         </button>
-
-        {/* REMOVED: Update Status button */}
       </div>
     </div>
   );

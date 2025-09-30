@@ -15,11 +15,29 @@ interface EskomStatus {
   updatedAt: string;
 }
 
+interface Business {
+  id: string;
+  name: string;
+  type: string;
+  address: string;
+  areaId: string;
+  areaName: string;
+  hasPower: boolean;
+  powerType: string;
+  verified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  owner: {
+    name: string;
+    email: string;
+  };
+}
+
 export default function Search() {
   const { data: session } = useSession();
   const [areas, setAreas] = useState<AreaInfo[]>([]);
   const [selectedArea, setSelectedArea] = useState("");
-  const [businesses, setBusinesses] = useState<any[]>([]);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showRegistration, setShowRegistration] = useState(false);
@@ -201,13 +219,14 @@ export default function Search() {
         {/* Business Results */}
         {businesses.length > 0 ? (
           <div className="grid md:grid-cols-2 gap-4">
-            {businesses.map((b) => (
-              <div key={b.id} className="bg-white shadow rounded-lg p-4">
-                <h4 className="font-semibold text-lg">{b.name}</h4>
-                <p className="text-gray-600">{b.type}</p>
-                <p className="text-gray-600">{b.address}</p>
+            {businesses.map((business) => (
+              <div key={business.id} className="bg-white shadow rounded-lg p-4">
+                <h4 className="font-semibold text-lg">{business.name}</h4>
+                <p className="text-gray-600">{business.type}</p>
+                <p className="text-gray-600">{business.address}</p>
                 <p className="text-sm text-gray-500">
-                  Backup Power: {b.hasPower ? b.powerType : "None"}
+                  Backup Power:{" "}
+                  {business.hasPower ? business.powerType : "None"}
                 </p>
               </div>
             ))}

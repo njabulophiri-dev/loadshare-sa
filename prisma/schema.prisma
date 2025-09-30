@@ -9,21 +9,22 @@ datasource db {
 
 // BUSINESS MODEL
 model Business {
-  id        String   @id @default(cuid())
-  name      String
-  type      String
-  address   String
-  areaId    String
-  areaName  String
-  powerType String
-  hasPower  Boolean
-  ownerId   String
-  verified  Boolean  @default(false)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  owner     User     @relation(fields: [ownerId], references: [id])
-  Review    Review[]
+  id          String   @id @default(cuid())
+  name        String
+  type        String
+  address     String
+  areaId      String
+  areaName    String
+  powerType   String
+  hasPower    Boolean
+  ownerId     String
+  verified    Boolean  @default(false)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  description String?
+  owner       User     @relation(fields: [ownerId], references: [id])
+  Review      Review[]
 }
 
 model Review {
